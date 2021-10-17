@@ -6,14 +6,17 @@ import { Task } from '../../types/Task';
 import { TaskModel } from '../../models/TaskModel';
 import { UserModel } from '../../models/UserModel';
 import { GetTasksQueryParams } from '../../types/GetTasksQueryParams';
+import moment from 'moment';
 
-const handler = async(req: NextApiRequest, res:NextApiResponse<DefaultResponseMsg | Task[]>)=>{
+const handler = async(req:NextApiRequest, res:NextApiResponse<DefaultResponseMsg | Task[]>) =>{
     try{
+
         const userId = req?.body?.userId ? req?.body?.userId : req?.query?.userId as string;
         const failedValidation = await validateUser(userId);
         if(failedValidation){
             return res.status(400).json({ error: failedValidation});
         }
+
         if(req.method === 'POST'){
             return await saveTask(req, res, userId);
         }else if(req.method === 'GET'){
@@ -23,7 +26,7 @@ const handler = async(req: NextApiRequest, res:NextApiResponse<DefaultResponseMs
         }else if(req.method === 'DELETE'){
             return await deleteTask(req, res, userId);
         }
-        
+
         res.status(400).json({ error: 'Metodo solicitado nao existe '});
     }catch(e){
         console.log('Ocorreu erro ao gerenciar tarefas: ', e);
@@ -119,7 +122,10 @@ const getTasks = async (req:NextApiRequest, res:NextApiResponse<DefaultResponseM
             default: break;
         }
     }
+
+    console.log('query', query);
     const result = await TaskModel.find(query) as Task[];
+    console.log('result', result);
     return res.status(200).json(result);
 }
 
@@ -141,7 +147,7 @@ const saveTask = async(req:NextApiRequest, res:NextApiResponse<DefaultResponseMs
             return res.status(400).json({ error: 'Nome da tarefa invalida'});
         }
 
-        if(!task.finishPrevisionDate || new Date(task.finishPrevisionDate).getDate() < new Date().getDate()){
+        if(!task.finishPrevisionDate || moment(task.finishPrevisionDate).isBefore(moment())){
             return res.status(400).json({ error: 'Data de previsao invalida ou menor que hoje'});
         }
 
